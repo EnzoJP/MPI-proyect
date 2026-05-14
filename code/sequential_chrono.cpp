@@ -25,8 +25,8 @@
 #endif
 
 // Valor máximo que puede tomar un elemento de la matriz
-static const int MAX_VAL = 10000;
-
+static const int MAX_VAL = 1000000000;
+static const int MIN_VAL = 5000000;
 bool isPrime(int n)
 {
     if (n < 2) return false;
@@ -45,7 +45,7 @@ int* buildMatrix(int M, int R) {
     int* mat = new int[total];
 
     for (int k = 0; k < total; ++k) {
-        mat[k] = (std::rand() % MAX_VAL) + 1;
+        mat[k] = MIN_VAL + (std::rand() % (MAX_VAL - MIN_VAL + 1));
     }
 
     return mat;
@@ -82,7 +82,7 @@ int main(int argc, char* argv[]){
               << " Filas    (M) : " << M << "\n"
               << " Columnas (R) : " << R << "\n"
               << " Total elem.  : " << static_cast<long long>(M) * R << "\n"
-              << " Rango valores: [1, " << MAX_VAL << "]\n"
+              << " Rango valores: [" << MIN_VAL << ", " << MAX_VAL << "]\n"
               << "─────────────────────────────────────────────\n";
 
     std::srand(static_cast<unsigned>(std::time(nullptr)));
