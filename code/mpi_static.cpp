@@ -37,6 +37,21 @@ static const int MIN_VAL = 5000000;
 // is reproducible given the same `seed`.
 static int* matrix = nullptr;
 
+
+inline int generateValue(unsigned int seed, long long index)
+{
+    // Fast deterministic hash to generate value at specific index
+    unsigned int x = seed ^ (index >> 32);
+    x ^= x << 13;
+    x ^= x >> 17;
+    x ^= x << 5;
+    x ^= index & 0xFFFFFFFF;
+    x ^= x << 13;
+    x ^= x >> 17;
+    x ^= x << 5;
+    return MIN_VAL + (x % (MAX_VAL - MIN_VAL + 1));
+}
+
 // Build a local chunk of the global matrix: rows [startRow, startRow+rowCount)
 // Implementation details:
 // - `startRow` is the index of the first row in the global matrix that
@@ -59,19 +74,7 @@ void buildMatrixChunk(int startRow, int rowCount, int R, unsigned int seed) {
     }
 }
 
-inline int generateValue(unsigned int seed, long long index)
-{
-    // Fast deterministic hash to generate value at specific index
-    unsigned int x = seed ^ (index >> 32);
-    x ^= x << 13;
-    x ^= x >> 17;
-    x ^= x << 5;
-    x ^= index & 0xFFFFFFFF;
-    x ^= x << 13;
-    x ^= x >> 17;
-    x ^= x << 5;
-    return MIN_VAL + (x % (MAX_VAL - MIN_VAL + 1));
-}
+
 
 bool isPrime(int n)
 {
