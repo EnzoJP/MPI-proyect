@@ -28,7 +28,7 @@
 
 static const int MAX_VAL = 1000000000;
 static const int MIN_VAL = 5000000;
-static const int DYNAMIC_CHUNK_ROWS = 1;
+static const int DYNAMIC_CHUNK_ROWS = 1; // Number of rows to send in each task
 static const int TAG_TASK = 1;
 static const int TAG_RESULT = 2;
 
@@ -89,10 +89,6 @@ void sendTask(int destination, int startRow, int rowCount)
     MPI_Send(&task, 2, MPI_INT, destination, TAG_TASK, MPI_COMM_WORLD);
 }
 
-void sendChunk(int destination, const int* matrix, int startRow, int rowCount, int R)
-{
-    MPI_Send(matrix + (startRow * R), rowCount * R, MPI_INT, destination, TAG_TASK, MPI_COMM_WORLD);
-}
 
 int main(int argc, char* argv[])
 {
