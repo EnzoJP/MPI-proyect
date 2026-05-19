@@ -85,8 +85,8 @@ long long countPrimesInRowRange(int startRow, int rowCount, int R, unsigned int 
 
 void sendTask(int destination, int startRow, int rowCount)
 {
-    Task task{startRow, rowCount};
-    MPI_Send(&task, 2, MPI_INT, destination, TAG_TASK, MPI_COMM_WORLD);
+    int buf[2]; buf[0] = startRow; buf[1] = rowCount;
+    MPI_Send(buf, 2, MPI_INT, destination, TAG_TASK, MPI_COMM_WORLD);
 }
 
 void sendChunk(int destination, const int* matrix, int startRow, int rowCount, int R)
@@ -155,11 +155,17 @@ int main(int argc, char* argv[])
     MPI_Barrier(MPI_COMM_WORLD);
     double processStart = MPI_Wtime();
 
+    // Per-process compute time (ms) for reductions/diagnostics
+    double localTimeMs = 0.0;
+
     long long totalCount = 0;
 
     if (size == 1) {
         // Single process: generate and count all rows on-the-fly
+        double t0 = MPI_Wtime();
         totalCount = countPrimesInRowRange(0, M, R, seed);
+        double t1 = MPI_Wtime();
+        localTimeMs = (t1 - t0) * 1000.0;
     } else if (rank == 0) {
         // Master: distribute tasks and collect results
         int nextRow = 0;
@@ -195,15 +201,21 @@ int main(int argc, char* argv[])
     } else {
         // Worker: receive tasks, generate data locally, and process
         while (true) {
-            Task task{};
-            MPI_Recv(&task, 2, MPI_INT, 0, TAG_TASK, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+            int buf[2] = {0,0};
+            MPI_Recv(buf, 2, MPI_INT, 0, TAG_TASK, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 
-            if (task.rowCount <= 0) {
+            int startRow = buf[0];
+            int rowCount = buf[1];
+
+            if (rowCount <= 0) {
                 break;
             }
 
-            // Generate the requested rows locally
-            long long localCount = countPrimesInRowRange(task.startRow, task.rowCount, R, seed);
+            // Generate the requested rows locally (measure per-chunk time)
+            double t0 = MPI_Wtime();
+            long long localCount = countPrimesInRowRange(startRow, rowCount, R, seed);
+            double t1 = MPI_Wtime();
+            localTimeMs += (t1 - t0) * 1000.0;
 
             MPI_Send(&localCount, 1, MPI_LONG_LONG, 0, TAG_RESULT, MPI_COMM_WORLD);
         }
@@ -211,10 +223,23 @@ int main(int argc, char* argv[])
 
     double processEnd = MPI_Wtime();
 
+    // Reduce timing statistics across processes (max/min/avg)
+    double maxTimeMs = 0.0;
+    double minTimeMs = 0.0;
+    double sumTimeMs = 0.0;
+    MPI_Reduce(&localTimeMs, &maxTimeMs, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+    MPI_Reduce(&localTimeMs, &minTimeMs, 1, MPI_DOUBLE, MPI_MIN, 0, MPI_COMM_WORLD);
+    MPI_Reduce(&localTimeMs, &sumTimeMs, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+
     if (rank == 0) {
+        double totalProcMs = (processEnd - processStart) * 1000.0;
+        double avgTimeMs = sumTimeMs / size;
         std::cout << "-------------------------------------------------\n"
                   << " Prime numbers found : " << totalCount << "\n"
-                  << " Processing time     : " << (processEnd - processStart) * 1000.0 << " ms\n"
+                  << " Processing time (wall) : " << totalProcMs << " ms\n"
+                  << " Processing time (max)  : " << maxTimeMs << " ms\n"
+                  << " Processing time (min)  : " << minTimeMs << " ms\n"
+                  << " Processing time (avg)  : " << avgTimeMs << " ms\n"
                   << "-------------------------------------------------\n";
     }
 
