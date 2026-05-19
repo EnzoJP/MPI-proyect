@@ -137,41 +137,53 @@ int main(int argc, char* argv[])
     if (rank == 0) {
         std::cout << "[INFO] Building matrix..." << std::flush;
     }
+
+    // Single barrier before starting processing (no need for two)
     MPI_Barrier(MPI_COMM_WORLD);
+
     if (rank == 0) {
-           std::cout << " done. (processing on-the-fly)\n";
+        std::cout << " done. (processing on-the-fly)\n";
     }
 
-    MPI_Barrier(MPI_COMM_WORLD);
-    double processStart = MPI_Wtime();
+    // Each process measures its own computation time
+    double localStart = MPI_Wtime();
 
-    long long localCount = countPrimesInRowRange(startRow, localRows, R, seed);
-
-    std::vector<long long> partialCounts;
-    if (rank == 0) {
-        partialCounts.resize(size, 0);
+    long long localCount = 0;
+    double localTimeMs = 0.0;
+    if (localRows > 0) {
+        localCount = countPrimesInRowRange(startRow, localRows, R, seed);
+        double localEnd = MPI_Wtime();
+        localTimeMs = (localEnd - localStart) * 1000.0;
+    } else {
+        // No rows assigned to this rank
+        localTimeMs = 0.0;
     }
 
-    MPI_Gather(&localCount,
+    // Reduce local counts to total count at root (less memory and simpler than Gather+sum)
+    long long totalCount = 0;
+    MPI_Reduce(&localCount,
+               &totalCount,
                1,
                MPI_LONG_LONG,
-               rank == 0 ? partialCounts.data() : nullptr,
-               1,
-               MPI_LONG_LONG,
+               MPI_SUM,
                0,
                MPI_COMM_WORLD);
 
-    double processEnd = MPI_Wtime();
+    // Reduce timing statistics: max, min and average (avg computed via sum)
+    double maxTimeMs = 0.0;
+    double minTimeMs = 0.0;
+    double sumTimeMs = 0.0;
+    MPI_Reduce(&localTimeMs, &maxTimeMs, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+    MPI_Reduce(&localTimeMs, &minTimeMs, 1, MPI_DOUBLE, MPI_MIN, 0, MPI_COMM_WORLD);
+    MPI_Reduce(&localTimeMs, &sumTimeMs, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
 
     if (rank == 0) {
-        long long totalCount = 0;
-        for (long long partial : partialCounts) {
-            totalCount += partial;
-        }
-
+        double avgTimeMs = sumTimeMs / size;
         std::cout << "-------------------------------------------------\n"
                   << " Prime numbers found : " << totalCount << "\n"
-                  << " Processing time     : " << (processEnd - processStart) * 1000.0 << " ms\n"
+                  << " Processing time (max) : " << maxTimeMs << " ms\n"
+                  << " Processing time (min) : " << minTimeMs << " ms\n"
+                  << " Processing time (avg) : " << avgTimeMs << " ms\n"
                   << "-------------------------------------------------\n";
     }
 
