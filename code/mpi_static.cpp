@@ -86,24 +86,25 @@ bool isPrime(int n)
     return true;
 }
 
+//Old matrix calculation
 // long long countPrimesInRowRange(int startRow, int rowCount, int R, unsigned int seed)
-{
-    long long count = 0;
+// {
+//     long long count = 0;
 
-    // Generate and count primes row by row without storing matrix
-    long long baseIndex = (long long)startRow * R;
-    for (int i = 0; i < rowCount; ++i) {
-        for (int j = 0; j < R; ++j) {
-            int value = generateValue(seed, baseIndex + j);
-            if (isPrime(value)) {
-                ++count;
-            }
-        }
-        baseIndex += R;
-    }
+//     // Generate and count primes row by row without storing matrix
+//     long long baseIndex = (long long)startRow * R;
+//     for (int i = 0; i < rowCount; ++i) {
+//         for (int j = 0; j < R; ++j) {
+//             int value = generateValue(seed, baseIndex + j);
+//             if (isPrime(value)) {
+//                 ++count;
+//             }
+//         }
+//         baseIndex += R;
+//     }
 
-    return count;
-}
+//     return count;
+// }
 
 int main(int argc, char* argv[])
 {
