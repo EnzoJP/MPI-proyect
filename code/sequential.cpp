@@ -21,7 +21,7 @@
 #include <iostream>
  
 // Valor máximo que puede tomar un elemento de la matriz
-static const int MAX_VAL = 10000;
+static const int MAX_VAL = 1000000000;
  
 bool isPrime(int n)
 {

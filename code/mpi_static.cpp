@@ -234,6 +234,8 @@ int main(int argc, char* argv[])
     }
 
     // No matrix to delete - data generated
+    double TOTAL = MPI_Wtime();
+    std::cout << TOTAL << "------------------\n";
     MPI_Finalize();
     return 0;
 }
