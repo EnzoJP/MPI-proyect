@@ -5,18 +5,19 @@
  *   g++ -o sequential_chrono sequential_chrono.cpp
  *
  * Uso:
- *   ./sequential_chrono <M> <R>
+ *   ./sequential_chrono <M> <R> [seed]
  *
  *   <M>  : número de filas  (entero positivo)
  *   <R>  : número de columnas (entero positivo)
  *
  * Ejemplo:
- *   ./sequential_chrono 1000 1000
+ *   ./sequential_chrono 1000 1000 12345
  */
 
 #include <cmath>
 #include <cstdlib>
 #include <ctime>
+#include <cstdint>
 #include <iostream>
 #include <chrono>
 
@@ -27,6 +28,20 @@
 // Valor máximo que puede tomar un elemento de la matriz
 static const int MAX_VAL = 1000000000;
 static const int MIN_VAL = 5000000;
+
+inline int generateValue(unsigned int seed, long long index)
+{
+    // Hash determinista rapido para un indice
+    unsigned int x = seed ^ (index >> 32);
+    x ^= x << 13;
+    x ^= x >> 17;
+    x ^= x << 5;
+    x ^= index & 0xFFFFFFFF;
+    x ^= x << 13;
+    x ^= x >> 17;
+    x ^= x << 5;
+    return MIN_VAL + (x % (MAX_VAL - MIN_VAL + 1));
+}
 bool isPrime(int n)
 {
     if (n < 2) return false;
@@ -40,12 +55,12 @@ bool isPrime(int n)
     return true;
 }
 
-int* buildMatrix(int M, int R) {
+int* buildMatrix(int M, int R, unsigned int seed) {
     int total = M * R;
     int* mat = new int[total];
 
-    for (int k = 0; k < total; ++k) {
-        mat[k] = MIN_VAL + (std::rand() % (MAX_VAL - MIN_VAL + 1));
+    for (long long k = 0; k < total; ++k) {
+        mat[k] = generateValue(seed, k);
     }
 
     return mat;
@@ -59,15 +74,16 @@ int main(int argc, char* argv[]){
     SetConsoleCP(CP_UTF8);
 #endif
 
-    if (argc != 3) {
+    if (argc != 3 && argc != 4) {
         std::cerr << "\n[ERROR] Número incorrecto de argumentos.\n"
-                  << "  Uso correcto : " << argv[0] << " <M> <R>\n"
-                  << "  Ejemplo      : " << argv[0] << " 1000 1000\n\n";
+                  << "  Uso correcto : " << argv[0] << " <M> <R> [seed]\n"
+                  << "  Ejemplo      : " << argv[0] << " 1000 1000 12345\n\n";
         return 1;
     }
 
     int M = std::atoi(argv[1]);
     int R = std::atoi(argv[2]);
+    unsigned int seed = (argc == 4) ? static_cast<unsigned int>(std::strtoul(argv[3], nullptr, 10)) : 12345u;
 
     if (M <= 0 || R <= 0) {
         std::cerr << "\n[ERROR] Los tamaños M y R deben ser enteros positivos.\n"
@@ -81,16 +97,15 @@ int main(int argc, char* argv[]){
               << "─────────────────────────────────────────────\n"
               << " Filas    (M) : " << M << "\n"
               << " Columnas (R) : " << R << "\n"
+              << " Semilla     : " << seed << "\n"
               << " Total elem.  : " << static_cast<long long>(M) * R << "\n"
               << " Rango valores: [" << MIN_VAL << ", " << MAX_VAL << "]\n"
               << "─────────────────────────────────────────────\n";
 
-    std::srand(static_cast<unsigned>(std::time(nullptr)));
-
     std::cout << "[INFO] Construyendo la matriz..." << std::flush;
     auto t_build_inicio = std::chrono::high_resolution_clock::now();
 
-    int* A = buildMatrix(M, R);
+    int* A = buildMatrix(M, R, seed);
 
     auto t_build_fin = std::chrono::high_resolution_clock::now();
     double build_ms = std::chrono::duration<double, std::milli>(t_build_fin - t_build_inicio).count();
