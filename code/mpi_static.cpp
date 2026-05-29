@@ -197,9 +197,9 @@ int main(int argc, char* argv[])
         for (long long k = 0; k < total; ++k) {
             if (isPrime(matrix[k])) ++localCount;
         }
-        double compEnd = MPI_Wtime();
-        localCompMs = (compEnd - compStart) * 1000.0;
     }
+    double compEnd = MPI_Wtime();
+    localCompMs = (compEnd - compStart) * 1000.0;
 
     // Reduce local counts to total count at root
     long long totalCount = 0;
